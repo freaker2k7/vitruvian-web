@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import UIButton from '@/components/ui/Button.vue'
+import UIButton from '@/components/ui/Button.vue';
 import JSZip from 'jszip';
 
 const props = defineProps(['collection', 'renderer', 'current'])

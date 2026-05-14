@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import '@mdi/font/css/materialdesignicons.css'
-import CharacterView from '@/components/CharacterView.vue'
-import HorseView from '@/components/HorseView.vue'
+import CharacterView from '@/components/CharacterView.vue';
+import HorseView from '@/components/HorseView.vue';
+import '@mdi/font/css/materialdesignicons.css';
 
-import {ref, watch} from 'vue'
+import { ref } from 'vue';
 
 let tab = ref('character');
 

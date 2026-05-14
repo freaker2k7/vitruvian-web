@@ -168,7 +168,7 @@ function onFileSelected(event: any) {
         <input class="hidden" @change="onFileSelected" type="file" accept=".vit" ref="file">
       </div>
     </div>
-    <div v-for="(value, key, index) in savings" class="bg-slate-800 p-2 rounded flex gap-2">
+    <div v-for="(value, key, index) in savings" v-bind:key="key" class="bg-slate-800 p-2 rounded flex gap-2">
       <img :src="value.preview" class="bg-slate-700 rounded">
       <div class="flex-grow">
         <div class="flex gap-2 justify-end">

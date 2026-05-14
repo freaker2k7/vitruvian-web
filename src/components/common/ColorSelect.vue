@@ -30,15 +30,15 @@ function capitalize(str: string): string {
 
     </h2>
 
-    <div v-for="color in getCurrentType()?.palettes">
+    <div v-bind:key="color" v-for="color in getCurrentType()?.palettes">
       <h3 class="text-xs font-bold pl-2 my-2">{{ capitalize(color) }}</h3>
 
-      <div v-for="(value, key) of collection.colors.getAll()" class="cursor-pointer">
+      <div v-bind:key="key" v-for="(value, key) of collection.colors.getAll()" class="cursor-pointer">
         <template v-if="isShown(value, color)">
           <div class="flex hover:bg-slate-500 p-2 rounded" @click="emit('selected', key)">
             <div class="w-1/2 text-xs">{{ value.name }}</div>
             <div class="w-1/2 grid grid-rows-1 grid-cols-6 align-center">
-              <div v-for="(v, index) in value.palette" class="h-4"
+              <div v-bind:key="index" v-for="(v, index) in value.palette" class="h-4"
                    :class="{ 'rounded-l': index == 0, 'rounded-r': index == value.palette.length - 1}"
                    :style="{backgroundColor: `rgb(${v[0]}, ${v[1]}, ${v[2]})`}">&nbsp;
               </div>

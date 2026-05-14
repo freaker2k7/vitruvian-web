@@ -1,8 +1,8 @@
-import {Renderer} from "@/services/Renderer";
-import {ref, type UnwrapRef} from "vue";
-import {Item} from "../types/Item";
-import {ItemCollection} from "../types/ItemCollection";
-import type {ItemAnimation} from "@/types/ItemAnimation";
+import { Renderer } from "@/services/Renderer";
+import type { ItemAnimation } from "@/types/ItemAnimation";
+import { ref } from "vue";
+import { Item } from "../types/Item";
+import { ItemCollection } from "../types/ItemCollection";
 
 export class CharacterRenderer extends Renderer {
     constructor(collection: ItemCollection) {

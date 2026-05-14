@@ -1,30 +1,31 @@
 <script setup lang="ts">
-import {type Ref, ref} from "vue";
+import { type Ref, ref } from "vue";
 
-import SideBar from "@/components/ui/SideBar.vue";
-import ShortBar from "@/components/ui/ShortBar.vue";
-import UiButton from "@/components/ui/Button.vue"
+import UiButton from "@/components/ui/Button.vue";
 import PoseBar from "@/components/ui/PoseBar.vue";
+import ShortBar from "@/components/ui/ShortBar.vue";
+import SideBar from "@/components/ui/SideBar.vue";
 
-import ColorSelect from "@/components/common/ColorSelect.vue";
-import AnimationPlayer from "@/components/common/AnimationPlayer.vue";
 import AnimationMultiPlayer from "@/components/common/AnimationMultiPlayer.vue";
-import SavingsCard from "@/components/common/SavingsCard.vue";
+import AnimationPlayer from "@/components/common/AnimationPlayer.vue";
+import ColorSelect from "@/components/common/ColorSelect.vue";
 import CreditsCard from "@/components/common/CreditsCard.vue";
 import RenderingsCard from "@/components/common/RenderingsCard.vue";
+import SavingsCard from "@/components/common/SavingsCard.vue";
 import SpriteCard from "@/components/common/SpriteCard.vue";
 
 import SpriteCanvas from "@/components/character/SpriteCanvas.vue";
 
-import {CharacterRenderer} from "@/services/CharacterRenderer";
+import { CharacterRenderer } from "@/services/CharacterRenderer";
 
-import {ColorCollection} from "@/types/ColorCollection";
-import {CharacterCollection} from "@/types/CharacterCollection";
-import {Item} from "@/types/Item";
+import { CharacterCollection } from "@/types/CharacterCollection";
+import { ColorCollection } from "@/types/ColorCollection";
+import { Item } from "@/types/Item";
 
-import raw_data from '@/data/packed.json'
-import raw_colors from '@/data/colors.json'
+import raw_colors from '@/data/colors.json';
+import raw_data from '@/data/packed.json';
 
+import JSZip from 'jszip';
 
 const colors:Ref<ColorCollection> = ref(new ColorCollection())
 colors.value.initColors(raw_colors)
@@ -83,6 +84,247 @@ async function onRefresh() {
   jumpToNextActiveAnimation()
 }
 
+function getCredits():{[key:string]:{[key:string]:any}} {
+	return collection.value.getCredits()
+}
+
+async function generateRandomCharacter() {
+	// Reset to base state first
+	await collection.value.reset()
+
+	while (!(await _generateRandomCharacter().catch(() => false)));
+
+	// Call the onDownloadAll function to trigger the download of the generated character's spritesheets and credits
+	try {
+		await (async () => {
+			const zip = new JSZip();
+
+			const animations = renderer.getAnimationCanvases();
+
+			for(const animation in animations) {
+				zip.file(animation + '.png', animations[animation].value.toDataURL().split(';base64,').pop(), { base64: true });
+			}
+
+			zip.file('credits.json', JSON.stringify(getCredits(), null, 2));
+
+			const content:any = await zip.generateAsync({ type: 'blob' });
+			const blob:Blob = new Blob([content], { type: 'application/zip' });
+			const link:HTMLAnchorElement = document.createElement('a');
+			link.href = URL.createObjectURL(blob);
+			link.download = 'spritesheets.zip';
+			link.click();
+		})();
+	} catch (e) {
+		console.warn('onDownloadAll failed', e)
+	}
+}
+
+async function _generateRandomCharacter() {
+  const categories = collection.value.getSpriteCategories();
+
+  function getAllColorKeys() {
+    return Object.keys(colors.value.getAll())
+  }
+
+  function pickColorFromPaletteCandidates(candidates:string[]):string {
+    const allColors = colors.value.getAll();
+
+    // Try direct key match first
+    for(const c of candidates) {
+      if(allColors[c]) {
+        return c
+      }
+    }
+
+    // Treat candidate as material category (e.g. "skin", "hair", "any")
+    const materialCandidates:string[] = []
+
+    for(const key in allColors) {
+      const col = allColors[key]
+      for(const cand of candidates) {
+        if(col.materials && (col.materials.indexOf(cand) >= 0 || col.materials.indexOf('any') >= 0)) {
+          materialCandidates.push(key)
+          break
+        }
+      }
+    }
+
+    if(materialCandidates.length) {
+      return materialCandidates[Math.floor(Math.random() * materialCandidates.length)]
+    }
+
+    // Fallback to any color
+    const keys = getAllColorKeys()
+    return keys[Math.floor(Math.random() * keys.length)]
+  }
+
+  function includeProbabilityFor(type:string):number {
+    if(!type) return 0.35
+
+    if(type.endsWith('.body') || type.endsWith('.head')) {
+      return 1.0
+    }
+
+    if(type.startsWith('clothes.head_coverings') || type.startsWith('clothes.helmet_accessory')) {
+      return 0.2
+    }
+
+    if(type.startsWith('equipment.shields')) {
+      return 0.25
+    }
+
+    if(type.startsWith('injuries.')) {
+      return 0.15
+    }
+
+    if(type.startsWith('clothes.')) {
+      return 0.35
+    }
+
+    return 0.35
+  }
+
+  for(const catKey in categories) {
+    const cat = (categories as any)[catKey]
+
+    // handle flat children
+    if(cat.children) {
+      // Special handling for equipment: pick at most one weapon/tool
+      if(catKey === 'equipment') {
+        const weaponTypes = new Set([
+          'equipment.bows',
+          'equipment.bow_accessory',
+          'equipment.spears',
+          'equipment.staffs',
+          'equipment.staff_accessory',
+          'equipment.swords',
+          'equipment.tools',
+          'equipment.misc'
+        ])
+
+        const weaponChildren = cat.children.filter((c:any) => weaponTypes.has(c.type))
+        const otherChildren = cat.children.filter((c:any) => !weaponTypes.has(c.type))
+
+        // Select all non-weapon equipment children as usual (with chance to be none)
+        for(const child of otherChildren) {
+          const options:{[key:string]:any} = collection.value.getOptions(child.type)
+
+          const keys = Object.keys(options)
+          if(!keys.length) {
+            continue
+          }
+
+          const prob = includeProbabilityFor(child.type)
+          if(Math.random() > prob) {
+            continue
+          }
+
+          const pick = options[keys[Math.floor(Math.random() * keys.length)]]
+
+          for(const material in pick.materials) {
+            const mats = pick.materials[material].palettes || []
+            if(mats.length) {
+              const chosen = pickColorFromPaletteCandidates(mats)
+              pick.colors.set(material, chosen)
+            }
+          }
+
+          await collection.value.select(pick)
+        }
+
+        // For weapon/tool children, pick at most one (weighted chance to pick none)
+        if(weaponChildren.length) {
+          const includeProbability = 0.25 // probability to include a weapon/tool (25%)
+          if(Math.random() < includeProbability) {
+            const child = weaponChildren[Math.floor(Math.random() * weaponChildren.length)]
+            const options:{[key:string]:any} = collection.value.getOptions(child.type)
+
+            const keys = Object.keys(options)
+            if(keys.length) {
+              const pick = options[keys[Math.floor(Math.random() * keys.length)]]
+
+              for(const material in pick.materials) {
+                const mats = pick.materials[material].palettes || []
+                if(mats.length) {
+                  const chosen = pickColorFromPaletteCandidates(mats)
+                  pick.colors.set(material, chosen)
+                }
+              }
+
+              await collection.value.select(pick)
+            }
+          }
+        }
+      } else {
+        for(const child of cat.children) {
+          const options:{[key:string]:any} = collection.value.getOptions(child.type)
+
+          const keys = Object.keys(options)
+          if(!keys.length) {
+            continue
+          }
+
+          const prob = includeProbabilityFor(child.type)
+          if(Math.random() > prob) {
+            continue
+          }
+
+          const pick = options[keys[Math.floor(Math.random() * keys.length)]]
+
+          // assign random palettes for materials
+          for(const material in pick.materials) {
+            const mats = pick.materials[material].palettes || []
+            if(mats.length) {
+              const chosen = pickColorFromPaletteCandidates(mats)
+              pick.colors.set(material, chosen)
+            }
+          }
+
+          await collection.value.select(pick)
+        }
+      }
+    }
+
+    // handle tabs (clothes has tabs)
+    if(cat.tabs) {
+      for(const tabKey in cat.tabs) {
+        const tab = cat.tabs[tabKey]
+        for(const child of tab.children) {
+          const options:{[key:string]:any} = collection.value.getOptions(child.type)
+
+          const keys = Object.keys(options)
+          if(!keys.length) {
+            continue
+          }
+
+          const prob = includeProbabilityFor(child.type)
+          if(Math.random() > prob) {
+            continue
+          }
+
+          const pick = options[keys[Math.floor(Math.random() * keys.length)]]
+
+          for(const material in pick.materials) {
+            const mats = pick.materials[material].palettes || []
+            if(mats.length) {
+              const chosen = pickColorFromPaletteCandidates(mats)
+              pick.colors.set(material, chosen)
+            }
+          }
+
+          await collection.value.select(pick)
+        }
+      }
+    }
+  }
+
+  renderer.draw()
+  refresh.value++
+  jumpToNextActiveAnimation()
+
+  return true
+}
+
 const currentPose = ref('walk')
 </script>
 
@@ -123,6 +365,7 @@ const currentPose = ref('walk')
         <ui-button @click="centerTab = 'preview-multiple'" :active="centerTab == 'preview-multiple'" ui="primary-square" title="Preview Multiple" icon="filmstrip-box-multiple"></ui-button>
         <ui-button @click="centerTab = 'preview'" :active="centerTab == 'preview'" ui="primary-square" title="Preview" icon="filmstrip-box"></ui-button>
         <ui-button @click="centerTab = 'sprites'" :active="centerTab == 'sprites'" ui="primary-square" title="Sprites" icon="grid"></ui-button>
+        <ui-button @click="generateRandomCharacter()" ui="primary-square" title="Random" icon="magic-staff"></ui-button>
       </div>
     </main>
 

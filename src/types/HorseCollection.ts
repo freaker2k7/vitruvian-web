@@ -28,10 +28,12 @@ export class HorseCollection extends ItemCollection {
         return !!this.selected.horse?.body
     }
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
     getTileSize(animation:string):number {
         return 128
     }
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
     isAnimationDisabled(animation:string):boolean {
         return false
     }

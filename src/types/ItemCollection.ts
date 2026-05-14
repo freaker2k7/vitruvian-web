@@ -1,7 +1,6 @@
-import {Item} from "./Item";
-import {ColorCollection} from "./ColorCollection";
-import {ref} from "vue";
-import {ItemLayer} from "./ItemLayer";
+import { ColorCollection } from "./ColorCollection";
+import { Item } from "./Item";
+import { ItemLayer } from "./ItemLayer";
 
 export abstract class ItemCollection {
     spriteTypes:string[] = []
@@ -155,6 +154,7 @@ export abstract class ItemCollection {
             item = this.getItems(id) as Item
         }
 
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [type, category, index]:string[] = id.split('.')
 
         if(!(type in this.selected)) {
@@ -179,6 +179,7 @@ export abstract class ItemCollection {
             id = idOrItem.id;
         }
 
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [type, category, index]:string[] = id.split('.')
 
         delete this.selected[type][category]
@@ -224,9 +225,38 @@ export abstract class ItemCollection {
         }
     }
 
+    /**
+     * Reset collection: restore original colors for all items and clear selection
+     */
+    async reset() {
+        // Restore original colors for every known item
+        const tasks: Promise<any>[] = [];
+
+        for (const type in this.items) {
+            for (const category in this.items[type]) {
+                for (const index in this.items[type][category]) {
+                    const item: Item = this.items[type][category][index];
+
+                    for (const material in item.colors.originalColors) {
+                        item.colors.set(material, item.colors.getOriginal(material));
+                    }
+
+                    // recolorize to apply changes (ignore failures per-item)
+                    tasks.push(item.colorize().then(() => item.colors.update()).catch(() => {}));
+                }
+            }
+        }
+
+        await Promise.all(tasks);
+
+        // Clear selected items
+        this.selected = {};
+    }
+
 
 
     isSelected(key:string):boolean {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [type, category, index]:string[] = key.split('.')
 
         if(!this.selected[type]) {

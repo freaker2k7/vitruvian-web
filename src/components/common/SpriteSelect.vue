@@ -48,9 +48,9 @@ function hasNoColors() {
   return !selected.value || !selected.value.id || Object.keys(selected.value.materials).length == 0;
 }
 
-function hasOptions() {
-  return Object.keys(getOptions()).length > 0;
-}
+// function hasOptions() {
+//   return Object.keys(getOptions()).length > 0;
+// }
 
 function getOptions() {
   return props.collection.getFilteredOptions(props.type)
@@ -80,7 +80,7 @@ watch(() => props.refresh, () => {
       <ui-dropdown @selected="onSelect" :selected="collection.getSelected(type)" :options="getOptions()" :type="type"
                    :class="{'rounded-r': hasNoColors()}"></ui-dropdown>
       <template v-if="selected">
-        <button @click="openColorSelector(key as string)" :title="value.name" class="min-w-8 w-8 bg-slate-700 p-1"
+        <button v-bind:key="key" @click="openColorSelector(key as string)" :title="value.name" class="min-w-8 w-8 bg-slate-700 p-1"
                 :class="{ 'rounded-r': isLast(index) }" v-for="(value, key, index) in selected.materials">
           <div class="h-full rounded align-center" :style="{ backgroundColor: getColor(key)}"></div>
         </button>
@@ -92,12 +92,12 @@ watch(() => props.refresh, () => {
               class="bg-slate-700 text-slate-300 flex-grow p-2 rounded-l truncate w-full"
               :class="{'rounded-r': hasNoColors()}" id="">
         <option value="">Select...</option>
-        <option v-for="value in getOptions()" :value="value.id" :selected="value.id == selected.id">{{ value.name }}
+        <option v-bind:key="value.id" v-for="value in getOptions()" :value="value.id" :selected="value.id == selected.id">{{ value.name }}
         </option>
       </select>
 
       <template v-if="selected">
-        <button @click="openColorSelector(key as string)" :title="value.name" class="min-w-8 w-8 bg-slate-700 p-1"
+        <button v-bind:key="key" @click="openColorSelector(key as string)" :title="value.name" class="min-w-8 w-8 bg-slate-700 p-1"
                 :class="{ 'rounded-r': isLast(index) }" v-for="(value, key, index) in selected.materials">
           <div class="h-full rounded align-center" :style="{ backgroundColor: getColor(key)}"></div>
         </button>

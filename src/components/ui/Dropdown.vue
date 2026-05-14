@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {type Ref, ref} from 'vue';
+import { type Ref, ref } from 'vue';
 
-import {Item} from "@/types/Item";
+import { Item } from "@/types/Item";
 
 const props = defineProps<{
   type: string,
@@ -98,7 +98,7 @@ window.addEventListener('click', closeDropdownOnOutsideClick);
       </li>
 
       <template v-for="(opts, key) of options">
-        <li v-if="key.toString() != '_'" class="select-none capitalize text-slate-200 px-2 py-1 pointer-events-none bg-slate-700" @click.stop="selectOption(null)">
+        <li v-bind:key="key" v-if="key.toString() != '_'" class="select-none capitalize text-slate-200 px-2 py-1 pointer-events-none bg-slate-700" @click.stop="selectOption(null)">
           {{key}}
         </li>
         <li :title="option.name" class="select-none text-slate-200 px-2 py-1 cursor-pointer hover:bg-slate-500 flex" v-for="(option, index) in opts" :key="option?.id" @click.stop="selectOption(option)">
