@@ -111,7 +111,7 @@ async function generateRandomCharacter() {
 			const blob:Blob = new Blob([content], { type: 'application/zip' });
 			const link:HTMLAnchorElement = document.createElement('a');
 			link.href = URL.createObjectURL(blob);
-			link.download = 'spritesheets.zip';
+			link.download = `spritesheets-${Date.now()}.zip`;
 			link.click();
 		})();
 	} catch (e) {
@@ -365,7 +365,7 @@ const currentPose = ref('walk')
         <ui-button @click="centerTab = 'preview-multiple'" :active="centerTab == 'preview-multiple'" ui="primary-square" title="Preview Multiple" icon="filmstrip-box-multiple"></ui-button>
         <ui-button @click="centerTab = 'preview'" :active="centerTab == 'preview'" ui="primary-square" title="Preview" icon="filmstrip-box"></ui-button>
         <ui-button @click="centerTab = 'sprites'" :active="centerTab == 'sprites'" ui="primary-square" title="Sprites" icon="grid"></ui-button>
-        <ui-button @click="generateRandomCharacter()" ui="primary-square" title="Random" icon="magic-staff"></ui-button>
+        <ui-button @click="generateRandomCharacter()" ui="primary-square" title="Random" icon="magic-staff" id="generate-random"></ui-button>
       </div>
     </main>
 
